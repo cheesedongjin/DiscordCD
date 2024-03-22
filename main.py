@@ -57,9 +57,9 @@ async def on_message(message):
     if message.author.name == "_cheese_07" and "//" in message.content:
         keyword = message.content.split("//")[:-1]
         response = message.content.split("//")[-1]
-        all = message.content.split("//")
+        all_ = message.content.split("//")
         kss = "고양"
-        filtered_list = [item for item in all if item != "" and item != " "]
+        filtered_list = [item for item in all_ if item != "" and item != " "]
         if len(filtered_list) >= 2:
             for ks in keyword:
                 kss += "//" + ks
