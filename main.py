@@ -67,6 +67,7 @@ async def on_message(message):
             await message.channel.send(f"키워드 '{kss.replace('//', ', ')}'에 대한 대답이 'username님, {response}'로 설정되었습니다.")
             save_responses()
         else:
+            print("test")
             print(filtered_list)
             await message.channel.send(f"뭔가 잘못되었네요. 정확한 형식으로 다시 한 번 시도해주세요.")
         return
