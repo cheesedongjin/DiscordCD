@@ -60,7 +60,7 @@ async def on_message(message):
         all = message.content.split("//")
         kss = "고양"
         filtered_list = [item for item in all if item != "" and item != " "]
-        if len(filtered_list) >= 1:
+        if len(filtered_list) >= 2:
             for ks in keyword:
                 kss += "//" + ks
             keyword_responses[kss] = response
