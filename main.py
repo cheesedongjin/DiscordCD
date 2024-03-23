@@ -130,7 +130,7 @@ async def on_message(message):
     if "사랑" in message.content or "좋" in message.content:
         if "고양" in message.content:
             await message.add_reaction('❤️')
-        return
+            return
 
     if message.author.name == "_cheese_07" and "//" in message.content:
         keyword = message.content.split("//")[:-1]
@@ -151,6 +151,7 @@ async def on_message(message):
             if filtered_list[0] == "리스트":
                 for idx, (key, value) in enumerate(keyword_responses.items(), start=1):
                     await message.channel.send(f"{idx}. {key}: {value}")
+                await message.channel.send("--------리스트 끝--------")
             elif filtered_list[0] == "삭제":
                 for idx, (key, value) in enumerate(keyword_responses.items(), start=1):
                     await message.author.send(f"{idx}. {key}: {value}")
@@ -162,6 +163,7 @@ async def on_message(message):
                 await message.author.send("아래는 수정된 리스트입니다.")
                 for idx, (key, value) in enumerate(keyword_responses.items(), start=1):
                     await message.author.send(f"{idx}. {key}: {value}")
+                await message.channel.send("--------리스트 끝--------")
         return
 
     if "끝말잇기" in message.content and "고양" in message.content:
