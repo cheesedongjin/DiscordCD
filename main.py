@@ -3,9 +3,46 @@ import random
 import time
 import requests
 import hgtk
-
 import discord
 from discord.ext import commands
+from bs4 import BeautifulSoup
+
+
+def parse_quotes():
+    url = 'https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=1&ie=utf8&query=%EB%AA%85%EC%96%B8'
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    quotes = [quote.text.strip() for quote in soup.find_all('p', class_='lngkr')]
+    authors = [author.text.strip() for author in soup.find_all('span', class_='engnm')]
+
+    return quotes, authors
+
+
+def generate_number():
+    return random.sample(range(1, 10), 3)
+
+
+def count_strikes_and_balls(secret_number, guess):
+    strikes = 0
+    balls = 0
+    for i in range(3):
+        if guess[i] == secret_number[i]:
+            strikes += 1
+        elif guess[i] in secret_number:
+            balls += 1
+    return strikes, balls
+
+
+def validate_input(guess):
+    if not guess.isdigit() or len(guess) != 3:
+        return False
+    if len(set(guess)) != 3:
+        return False
+    return True
+
 
 # 봇의 설정
 token = 'MTE4OTAyNzMzNjYwODI4NDcxMg.G9r1Qa.mnHEXBMQDh0DbLHp9Qgo9rj2I9IxE7KlYnwia4'
@@ -24,6 +61,13 @@ apikey = '480720C2EC23D1B81390E37674841507'
 
 # 좀 치사한 한방단어 방지 목록
 blacklist = ['즘', '틱', '늄', '슘', '퓸', '늬', '뺌', '섯', '숍', '튼', '름', '늠', '쁨']
+FFMPEG_OPTIONS = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'options': '-vn'
+}
+
+# 재생목록을 저장할 리스트
+playlist = []
 
 # 파일 경로
 file_path = 'keyword_responses.json'
@@ -149,26 +193,70 @@ async def on_message(message):
             save_responses()
         else:
             if filtered_list[0] == "리스트":
+                emb = ''
                 for idx, (key, value) in enumerate(keyword_responses.items(), start=1):
-                    await message.channel.send(f"{idx}. {key}: {value}")
-                await message.channel.send("--------리스트 끝--------")
+                    emb += f"{idx}. {key}: {value}\n"
+                embed = discord.Embed(description=emb)
+                await message.channel.send(embed=embed)
             elif filtered_list[0] == "삭제":
+                emb = ''
                 for idx, (key, value) in enumerate(keyword_responses.items(), start=1):
-                    await message.author.send(f"{idx}. {key}: {value}")
-                await message.author.send("삭제할 번호(1부터 정수만)를 선택해 주세요.")
+                    emb += f"{idx}. {key}: {value}\n"
+                embed = discord.Embed(description=emb)
+                embed.set_footer(text="삭제할 번호(1부터 정수만)를 선택해 주세요.")
+                await message.channel.send(embed=embed)
                 message_ = await bot.wait_for('message', check=lambda m: m.author == message.author)
                 idx = int(message_.content)
                 keyword_responses.pop(list(keyword_responses.keys())[idx - 1])
                 save_responses()
                 await message.author.send("아래는 수정된 리스트입니다.")
+                emb = ''
                 for idx, (key, value) in enumerate(keyword_responses.items(), start=1):
-                    await message.author.send(f"{idx}. {key}: {value}")
-                await message.channel.send("--------리스트 끝--------")
+                    emb += f"{idx}. {key}: {value}\n"
+                embed = discord.Embed(description=emb)
+                embed.set_footer(text="수정된 리스트")
+                await message.channel.send(embed=embed)
+        return
+
+    if "명언" in message.content and "고양" in message.content:
+        quotes, authors = parse_quotes()
+        ind = random.randint(0, len(quotes) - 1)
+        await message.reply(embed=discord.Embed(description=quotes[ind]).set_footer(text=authors[ind]))
+        return
+
+    if "야구" in message.content and "게임" in message.content and "고양" in message.content:
+        secret_number = generate_number()
+        rep = await message.reply(embed=discord.Embed(description='').add_field(name="야구 게임을 시작합니다", value=''))
+        rephis = rep.embeds[0].fields[0].name
+        attempts = 0
+        while True:
+            rep = await rep.edit(embed=discord.Embed(description=rephis).add_field(name=".\n3자리 숫자를 입력해주세요", value=''))
+            rephis = rep.embeds[0].description + rep.embeds[0].fields[0].name
+            guess_ = await bot.wait_for('message', check=lambda m: m.author == message.author)
+            await rep.delete()
+            guess = guess_.content
+            rephis += ".\nㄴ " + guess
+            await guess_.delete()
+            if not validate_input(guess):
+                rep = await message.reply(embed=discord.Embed(description=rephis).add_field(
+                    name=".\n올바른 입력이 아닙니다. 다시 시도하세요", value=''))
+                rephis = rep.embeds[0].description + rep.embeds[0].fields[0].name
+                continue
+            attempts += 1
+            guess = [int(x) for x in guess]
+            strikes, balls = count_strikes_and_balls(secret_number, guess)
+            rep = await message.reply(embed=discord.Embed(description=rephis).add_field(
+                name=f".\n{strikes} 스트라이크, {balls} 볼", value=''))
+            rephis = rep.embeds[0].description + rep.embeds[0].fields[0].name
+            if strikes == 3:
+                await rep.edit(embed=discord.Embed(
+                    description=rephis).add_field(name=f".\n축하합니다! {attempts}번 만에 정답을 맞추셨습니다.", value=''))
+                break
         return
 
     if "끝말잇기" in message.content and "고양" in message.content:
         playing = True
-        await message.reply('''
+        await message.reply(embed=discord.Embed(description='''
 =============고양이 끝말잇기===============
 사전 데이터 제공: 국립국어원 한국어기초사전
 끝말잇기 코드 원본: https://blog.naver.com/pdj2885/221552896123
@@ -188,7 +276,7 @@ async def on_message(message):
 ==========================================
 
 먼저 시작하세요!
-''')
+'''))
 
         sword = ''
         while playing:
