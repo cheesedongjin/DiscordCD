@@ -269,7 +269,7 @@ async def on_message(message):
         responding = True
         playing = True
         global history
-        rephist = await message.reply(embed=discord.Embed(description="").add_field(name='''
+        rept = await message.reply(embed=discord.Embed(description='''
 =============고양이 끝말잇기===============
 사전 데이터 제공: 국립국어원 한국어기초사전
 끝말잇기 코드 원본: https://blog.naver.com/pdj2885/221552896123
@@ -287,70 +287,90 @@ async def on_message(message):
    그럴 때는 다른 단어로 시도해 주세요:(
 2. 고양이가 부적절한 단어를 말할 수 있어요.
 ==========================================
-
-먼저 시작하세요!
-''', value=''))
+''').add_field(name="먼저 시작하세요!", value=''))
+        rephist = rept.embeds[0].fields[0].name
 
         sword = ''
+        message_ = message
         history = []
         while playing:
             query = ''
             word_ok = False
 
             while not word_ok:
-                message = await bot.wait_for('message', check=lambda message__: message__.author == message.author)
-                query = message.content
+                message_ = await bot.wait_for('message', check=lambda message__: message__.author == message.author)
+                await rept.delete()
+                query = message_.content
+                if not isinstance(message_.channel, discord.DMChannel):
+                    await message_.delete()
+                rephist += ".\nㄴ " + query
+                rept = await message.reply(embed=discord.Embed(description=rephist))
                 word_ok = True
 
                 if query == '/그만':
                     playing = False
-                    await message.channel.send('고양이 승리!')
+                    await rept.edit(embed=discord.Embed(description=rephist).add_field(name='.\n고양이 승리!', value=''))
                     break
                 elif query == '/다시':
                     history = []
-                    await message.channel.send('고양이 승리!')
-                    await message.channel.send('게임을 다시 시작합니다.')
+                    rept = await rept.edit(embed=discord.Embed(
+                        description=rephist).add_field(name='.\n고양이 승리!\n게임을 다시 시작합니다.', value=''))
+                    rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
                     word_ok = False
                 else:
                     if query == '':
                         word_ok = False
 
                         if len(history) == 0:
-                            await message.channel.send('단어를 입력하여 끝말잇기를 시작합니다.')
+                            rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                name='.\n단어를 입력하여 끝말잇기를 시작합니다.', value=''))
                         else:
-                            await message.channel.send(sword + '(으)로 시작하는 단어를 입력해 주십시오.')
-
+                            rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                name=f'.\n{sword}(으)로 시작하는 단어를 입력해 주십시오.', value=''))
+                        rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
                     else:
                         # 첫 글자의 초성 분석하여 두음법칙 적용 -> 규칙에 아직 완벽하게 맞지 않으므로 차후 수정 필요
                         if not len(history) == 0 and not query[0] == sword and not query == '':
                             sdis = hgtk.letter.decompose(sword)
                             qdis = hgtk.letter.decompose(query[0])
                             if sdis[0] == 'ㄹ' and qdis[0] == 'ㄴ':
-                                await message.reply('두음법칙 적용됨')
+                                rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                    name='.\n두음법칙 적용됨', value=''))
                             elif (sdis[0] == 'ㄹ' or sdis[0] == 'ㄴ') and qdis[0] == 'ㅇ' and qdis[1] in (
                                     'ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
-                                await message.reply('두음법칙 적용됨')
+                                rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                    name='.\n두음법칙 적용됨', value=''))
                             else:
                                 word_ok = False
-                                await message.reply(sword + '(으)로 시작하는 단어여야 합니다.')
+                                rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                    name=f'.\n{sword}(으)로 시작하는 단어여야 합니다.', value=''))
+                            rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
 
                         if len(query) == 1:
                             word_ok = False
-                            await message.reply('적어도 두 글자가 되어야 합니다')
+                            rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                name='.\n적어도 두 글자가 되어야 합니다', value=''))
+                            rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
 
                         if query in history:
                             word_ok = False
-                            await message.reply('이미 입력한 단어입니다')
+                            rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                name='.\n이미 입력한 단어입니다', value=''))
+                            rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
 
                         if query[len(query) - 1] in blacklist:
-                            await message.channel.send('...')
+                            rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                name='.\n...', value=''))
+                            rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
 
                         if word_ok:
                             # 단어의 유효성을 체크
                             ans = checkexists(query)
                             if ans == '':
                                 word_ok = False
-                                await message.reply('유효한 단어를 입력해 주십시오')
+                                rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                                    name='.\n유효한 단어를 입력해 주십시오', value=''))
+                                rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
 
             history.append(query)
 
@@ -364,7 +384,9 @@ async def on_message(message):
                     sdis = hgtk.letter.decompose(start)
                     if sdis[0] == 'ㄹ':
                         newq = hgtk.letter.compose('ㄴ', sdis[1], sdis[2])
-                        await message.channel.send(start + '->' + newq)
+                        rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                            name=f".\n{start} -> {newq}", value=''))
+                        rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
                         start = newq
                         ans = findword(newq + '*')
 
@@ -373,18 +395,23 @@ async def on_message(message):
                     sdis = hgtk.letter.decompose(start)
                     if sdis[0] == 'ㄴ' and sdis[1] in ('ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
                         newq = hgtk.letter.compose('ㅇ', sdis[1], sdis[2])
-                        await message.channel.send(start + '->' + newq)
+                        rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                            name=f".\n{start} -> {newq}", value=''))
+                        rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
                         ans = findword(newq + '*')
 
                 if ans == '':
-                    await message.channel.send(message.author.name + '님의 승리!')
+                    await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                        name=f".\n{message_.author.name}님의 승리!", value=''))
                     break
                 else:
                     answord = mid_return(ans, '<word>', '</word>')  # 단어 불러오기
                     ansdef = mid_return(ans, '<definition>', '</definition>')  # 품사 불러오기
                     history.append(answord)
 
-                    await message.reply(query + '>' + answord + '\n(' + ansdef + ')\n')
+                    rept = await rept.edit(embed=discord.Embed(description=rephist).add_field(
+                        name=f".\n{query}>{answord}\n({ansdef})\n", value=''))
+                    rephist = rept.embeds[0].description + rept.embeds[0].fields[0].name
                     sword = answord[len(answord) - 1]
 
         responding = False
