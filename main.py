@@ -50,6 +50,7 @@ prefix = ''
 
 # 봇 객체 생성
 bot = commands.Bot(command_prefix=prefix, intents=discord.Intents.all())
+responding = False
 
 # 키워드와 대답 사전
 keyword_responses = {}
@@ -61,13 +62,6 @@ apikey = '480720C2EC23D1B81390E37674841507'
 
 # 좀 치사한 한방단어 방지 목록
 blacklist = ['즘', '틱', '늄', '슘', '퓸', '늬', '뺌', '섯', '숍', '튼', '름', '늠', '쁨']
-FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn'
-}
-
-# 재생목록을 저장할 리스트
-playlist = []
 
 # 파일 경로
 file_path = 'keyword_responses.json'
@@ -106,7 +100,7 @@ def findword(query):
     words = midReturn_all(response.text, '<item>', '</item>')
     for w in words:
         # 이미 쓴 단어가 아닐때
-        if not (w in history):
+        if w not in history:
             # 한글자가 아니고 품사가 명사일때
             word = midReturn(w, '<word>', '</word>')
             pos = midReturn(w, '<pos>', '</pos>')
@@ -168,13 +162,14 @@ async def on_ready():
 # 메시지 수신 이벤트 핸들러
 @bot.event
 async def on_message(message):
-    if message.author.bot or "고양시" in message.content:
+    global responding
+
+    if message.author.bot or "고양시" in message.content or responding:
         return
 
     if "사랑" in message.content or "좋" in message.content:
         if "고양" in message.content:
             await message.add_reaction('❤️')
-            return
 
     if message.author.name == "_cheese_07" and "//" in message.content:
         keyword = message.content.split("//")[:-1]
@@ -186,10 +181,7 @@ async def on_message(message):
             for ks in keyword:
                 kss += "//" + ks
             keyword_responses[kss] = response
-            if "username" not in response:
-                await message.channel.send(f"키워드 '{kss.replace('//', ', ')}'에 대한 대답이 'username님, {response}'로 설정되었습니다.")
-            else:
-                await message.channel.send(f"키워드 '{kss.replace('//', ', ')}'에 대한 대답이 '{response}'로 설정되었습니다.")
+            await message.channel.send(f"키워드 '{kss.replace('//', ', ')}'에 대한 대답이 '{response}'로 설정되었습니다.")
             save_responses()
         else:
             if filtered_list[0] == "리스트":
@@ -224,7 +216,9 @@ async def on_message(message):
         await message.reply(embed=discord.Embed(description=quotes[ind]).set_footer(text=authors[ind]))
         return
 
-    if "야구" in message.content and "게임" in message.content and "고양" in message.content:
+    if "야구" in message.content and ("게임" in message.content or "숫자" in message.content)\
+            and "고양" in message.content:
+        responding = True
         secret_number = generate_number()
         rep = await message.reply(embed=discord.Embed(description='').add_field(name="야구 게임을 시작합니다", value=''))
         rephis = rep.embeds[0].fields[0].name
@@ -236,7 +230,8 @@ async def on_message(message):
             await rep.delete()
             guess = guess_.content
             rephis += ".\nㄴ " + guess
-            await guess_.delete()
+            if not isinstance(guess_.channel, discord.DMChannel):
+                await guess_.delete()
             if not validate_input(guess):
                 rep = await message.reply(embed=discord.Embed(description=rephis).add_field(
                     name=".\n올바른 입력이 아닙니다. 다시 시도하세요", value=''))
@@ -252,10 +247,13 @@ async def on_message(message):
                 await rep.edit(embed=discord.Embed(
                     description=rephis).add_field(name=f".\n축하합니다! {attempts}번 만에 정답을 맞추셨습니다.", value=''))
                 break
+        responding = False
         return
 
-    if "끝말잇기" in message.content and "고양" in message.content:
+    if "끝말" in message.content and "고양" in message.content:
+        responding = True
         playing = True
+        global history
         await message.reply(embed=discord.Embed(description='''
 =============고양이 끝말잇기===============
 사전 데이터 제공: 국립국어원 한국어기초사전
@@ -279,78 +277,67 @@ async def on_message(message):
 '''))
 
         sword = ''
+        history = []
         while playing:
-            history_ = []
             query = ''
-            wordOK = False
+            word_ok = False
 
-            while not wordOK:
+            while not word_ok:
                 message = await bot.wait_for('message', check=lambda message__: message__.author == message.author)
                 query = message.content
-                print(query)
-                wordOK = True
+                word_ok = True
 
                 if query == '/그만':
                     playing = False
-                    print('컴퓨터 승리!')
                     await message.channel.send('고양이 승리!')
                     break
                 elif query == '/다시':
-                    history_ = []
-                    print('게임을 다시 시작합니다.')
+                    history = []
+                    await message.channel.send('고양이 승리!')
                     await message.channel.send('게임을 다시 시작합니다.')
-                    wordOK = False
+                    word_ok = False
                 else:
                     if query == '':
-                        wordOK = False
+                        word_ok = False
 
-                        if len(history_) == 0:
-                            print('단어를 입력하여 끝말잇기를 시작합니다.')
+                        if len(history) == 0:
                             await message.channel.send('단어를 입력하여 끝말잇기를 시작합니다.')
                         else:
-                            print(sword + '(으)로 시작하는 단어를 입력해 주십시오.')
                             await message.channel.send(sword + '(으)로 시작하는 단어를 입력해 주십시오.')
 
                     else:
                         # 첫 글자의 초성 분석하여 두음법칙 적용 -> 규칙에 아직 완벽하게 맞지 않으므로 차후 수정 필요
-                        if not len(history_) == 0 and not query[0] == sword and not query == '':
+                        if not len(history) == 0 and not query[0] == sword and not query == '':
                             sdis = hgtk.letter.decompose(sword)
                             qdis = hgtk.letter.decompose(query[0])
                             if sdis[0] == 'ㄹ' and qdis[0] == 'ㄴ':
-                                print('두음법칙 적용됨')
-                                await message.channel.send('두음법칙 적용됨')
+                                await message.reply('두음법칙 적용됨')
                             elif (sdis[0] == 'ㄹ' or sdis[0] == 'ㄴ') and qdis[0] == 'ㅇ' and qdis[1] in (
                                     'ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
-                                print('두음법칙 적용됨')
-                                await message.channel.send('두음법칙 적용됨')
+                                await message.reply('두음법칙 적용됨')
                             else:
-                                wordOK = False
-                                print(sword + '(으)로 시작하는 단어여야 합니다.')
+                                word_ok = False
                                 await message.reply(sword + '(으)로 시작하는 단어여야 합니다.')
 
                         if len(query) == 1:
-                            wordOK = False
-                            print('적어도 두 글자가 되어야 합니다')
+                            word_ok = False
                             await message.reply('적어도 두 글자가 되어야 합니다')
 
-                        if query in history_:
-                            wordOK = False
-                            print('이미 입력한 단어입니다')
+                        if query in history:
+                            word_ok = False
                             await message.reply('이미 입력한 단어입니다')
 
                         if query[len(query) - 1] in blacklist:
-                            print('아.. 좀 치사한데요..')
-                            await message.channel.send('아.. 좀 치사한데요..')
+                            await message.channel.send('...')
 
-                        if wordOK:
+                        if word_ok:
                             # 단어의 유효성을 체크
                             ans = checkexists(query)
                             if ans == '':
-                                wordOK = False
-                                print('유효한 단어를 입력해 주십시오')
+                                word_ok = False
                                 await message.reply('유효한 단어를 입력해 주십시오')
 
-            history_.append(query)
+            history.append(query)
 
             if playing:
                 start = query[len(query) - 1]
@@ -362,7 +349,6 @@ async def on_message(message):
                     sdis = hgtk.letter.decompose(start)
                     if sdis[0] == 'ㄹ':
                         newq = hgtk.letter.compose('ㄴ', sdis[1], sdis[2])
-                        print(start, '->', newq)
                         await message.channel.send(start + '->' + newq)
                         start = newq
                         ans = findword(newq + '*')
@@ -372,26 +358,22 @@ async def on_message(message):
                     sdis = hgtk.letter.decompose(start)
                     if sdis[0] == 'ㄴ' and sdis[1] in ('ㅣ', 'ㅑ', 'ㅕ', 'ㅛ', 'ㅠ', 'ㅒ', 'ㅖ'):
                         newq = hgtk.letter.compose('ㅇ', sdis[1], sdis[2])
-                        print(start, '->', newq)
                         await message.channel.send(start + '->' + newq)
                         ans = findword(newq + '*')
 
                 if ans == '':
-                    print('당신의 승리!')
                     await message.channel.send(message.author.name + '님의 승리!')
                     break
                 else:
                     answord = midReturn(ans, '<word>', '</word>')  # 단어 불러오기
                     ansdef = midReturn(ans, '<definition>', '</definition>')  # 품사 불러오기
-                    history_.append(answord)
+                    history.append(answord)
 
-                    print(query, '>', answord, '\n(' + ansdef + ')\n')
                     await message.reply(query + '>' + answord + '\n(' + ansdef + ')\n')
                     sword = answord[len(answord) - 1]
 
-                    # 컴퓨터 승리여부 체크
-                    # if findword(sword) == '':
-                    #    print('tip: \'/다시\'를 입력하여 게임을 다시 시작할 수 있습니다')
+        responding = False
+        return
 
     for j in range(10, 0, -1):
         for res in keyword_responses:
@@ -406,10 +388,7 @@ async def on_message(message):
                             break
                     if not bo:
                         response = response.replace("username", message.author.mention)
-                        if message.author.mention in response:
-                            sent = await message.channel.send(response)
-                        else:
-                            sent = await message.channel.send(f"{message.author.mention}님, {response}")
+                        sent = await message.reply(response)
                         if len(sent.content) > 2000:
                             time.sleep(1.5)
                             await sent.edit(content="(삭제된 메시지입니다)")
@@ -417,7 +396,7 @@ async def on_message(message):
             except ValueError:
                 pass
 
-    if "고양" in message.content and "고양시" not in message.content:
+    if "고양" in message.content:
         fail_response = [
             "잘 알아듣지 못했어요:(",
             "부르셨나요? 무슨 말인지 모르겠어요ㅠㅠ",
@@ -429,7 +408,7 @@ async def on_message(message):
             "제가 뭔가를 놓쳤나요? 이해가 안 가네요ㅠㅠ"
         ]
         await message.channel.send(random.choice(fail_response))
-    await bot.process_commands(message)
+        return
 
 
 # 봇 시작
