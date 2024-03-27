@@ -186,7 +186,7 @@ async def on_message(message):
         if "고양" in message.content:
             await message.add_reaction('❤️')
 
-    if message.author.name == "_cheese_07" and "//" in message.content:
+    if message.author.name == "_cheese_07" and "//" in message.content and "http" not in message.content:
         keyword = message.content.split("//")[:-1]
         response = message.content.split("//")[-1]
         all_ = message.content.split("//")
