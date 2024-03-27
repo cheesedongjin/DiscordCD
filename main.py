@@ -8,6 +8,16 @@ from discord.ext import commands
 from bs4 import BeautifulSoup
 
 
+def fword(text):
+    filepath = "fword_list.txt"
+    with open(filepath, 'r', encoding='UTF8') as f:
+        words = f.read().splitlines()
+    for word in words:
+        if word in text:
+            return True
+    return False
+
+
 def parse_quotes():
     url = 'https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=1&ie=utf8&query=%EB%AA%85%EC%96%B8'
     headers = {'User-Agent': 'Mozilla/5.0'}
@@ -69,7 +79,7 @@ file_path = 'keyword_responses.json'
 
 # 지정한 두 개의 문자열 사이의 문자열을 리턴하는 함수
 # string list에서 단어, 품사와 같은 요소들을 추출할때 사용됩니다
-def midReturn(val, s, e):
+def mid_return(val, s, e):
     if s in val:
         val = val[val.find(s) + len(s):]
         if e in val:
@@ -79,7 +89,7 @@ def midReturn(val, s, e):
 
 # 지정한 두 개의 문자열 사이의 문자열 여러개를 리턴하는 함수
 # string에서 XML 등의 요소를 분석할때 사용됩니다
-def midReturn_all(val, s, e):
+def mid_return_all(val, s, e):
     if s in val:
         tmp = val.split(s)
         val = []
@@ -97,13 +107,13 @@ def findword(query):
     ans = []
 
     # 단어 목록을 불러오기
-    words = midReturn_all(response.text, '<item>', '</item>')
+    words = mid_return_all(response.text, '<item>', '</item>')
     for w in words:
         # 이미 쓴 단어가 아닐때
         if w not in history:
             # 한글자가 아니고 품사가 명사일때
-            word = midReturn(w, '<word>', '</word>')
-            pos = midReturn(w, '<pos>', '</pos>')
+            word = mid_return(w, '<word>', '</word>')
+            pos = mid_return(w, '<pos>', '</pos>')
             if len(word) > 1 and pos == '명사' and word not in history and not word[len(word) - 1] in blacklist:
                 ans.append(w)
     if len(ans) > 0:
@@ -118,13 +128,13 @@ def checkexists(query):
     ans = ''
 
     # 단어 목록을 불러오기
-    words = midReturn_all(response.text, '<item>', '</item>')
+    words = mid_return_all(response.text, '<item>', '</item>')
     for w in words:
         # 이미 쓴 단어가 아닐때
         if not (w in history):
             # 한글자가 아니고 품사가 명사일때
-            word = midReturn(w, '<word>', '</word>')
-            pos = midReturn(w, '<pos>', '</pos>')
+            word = mid_return(w, '<word>', '</word>')
+            pos = mid_return(w, '<pos>', '</pos>')
             if len(word) > 1 and pos == '명사' and word == query:
                 ans = w
 
@@ -165,6 +175,11 @@ async def on_message(message):
     global responding
 
     if message.author.bot or "고양시" in message.content or responding:
+        return
+    elif fword(message.content):
+        await message.reply("비속어에는 고양이가 대답하지 않아요.\n비속어가 아니라면 다른 말로 다시 시도해 주세요!")
+        if not isinstance(message.channel, discord.DMChannel):
+            await message.delete()
         return
 
     if "사랑" in message.content or "좋" in message.content:
@@ -254,7 +269,7 @@ async def on_message(message):
         responding = True
         playing = True
         global history
-        await message.reply(embed=discord.Embed(description='''
+        rephist = await message.reply(embed=discord.Embed(description="").add_field(name='''
 =============고양이 끝말잇기===============
 사전 데이터 제공: 국립국어원 한국어기초사전
 끝말잇기 코드 원본: https://blog.naver.com/pdj2885/221552896123
@@ -274,7 +289,7 @@ async def on_message(message):
 ==========================================
 
 먼저 시작하세요!
-'''))
+''', value=''))
 
         sword = ''
         history = []
@@ -365,8 +380,8 @@ async def on_message(message):
                     await message.channel.send(message.author.name + '님의 승리!')
                     break
                 else:
-                    answord = midReturn(ans, '<word>', '</word>')  # 단어 불러오기
-                    ansdef = midReturn(ans, '<definition>', '</definition>')  # 품사 불러오기
+                    answord = mid_return(ans, '<word>', '</word>')  # 단어 불러오기
+                    ansdef = mid_return(ans, '<definition>', '</definition>')  # 품사 불러오기
                     history.append(answord)
 
                     await message.reply(query + '>' + answord + '\n(' + ansdef + ')\n')
