@@ -1,0 +1,21 @@
+cheesedongjin
+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
+
+push:
+cd DiscordBotCD
+git init
+git add keyword_responses.json
+git commit -m "Update keyword_responses.json"
+git push -f https://github.com/cheesedongjin/DiscordBotCD.git
+
+pull:
+cd DiscordBotCD
+git init
+git pull https://github.com/cheesedongjin/DiscordBotCD.git
+
+run:
+tmux
+python3 main.py
+
+go into and exit:
+tmux a -t 0
