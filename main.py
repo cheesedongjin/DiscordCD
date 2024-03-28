@@ -14,7 +14,7 @@ def fword(text):
         words = f.read().splitlines()
     for word in words:
         if word in text:
-            return True
+            return word
     return False
 
 
@@ -146,13 +146,13 @@ def checkexists(query):
 
 # 함수들 추가
 def save_responses():
-    with open(file_path, 'w') as file:
+    with open(file_path, 'w', encoding='utf8') as file:
         json.dump(keyword_responses, file, ensure_ascii=False, indent=4)
 
 
 def load_responses():
     try:
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding='utf8') as file:
             data = json.load(file)
             keyword_responses.update(data)
     except FileNotFoundError:
@@ -174,22 +174,31 @@ async def on_ready():
 async def on_message(message):
     global responding
 
-    if message.author.bot or "고양시" in message.content or responding:
+    msg = message.content
+    mentioned_roles = [role for role in message.role_mentions if role in message.guild.get_member(bot.user.id).roles]
+
+    if message.reference and message.reference.resolved.author.bot:
+        msg += "고양아"
+    elif bot.user.mentioned_in(message) or mentioned_roles:
+        msg += "고양아"
+
+    if message.author == bot.user or "고양시" in msg or responding:
         return
-    elif fword(message.content):
-        await message.reply("비속어에는 고양이가 대답하지 않아요.\n비속어가 아니라면 다른 말로 다시 시도해 주세요!")
+    elif fword(msg) and "고양" in msg:
+        await message.reply("비속어에는 고양이가 대답하지 않아요.\n비속어가 아니라면 다른 말로 다시 시도해 주세요!\n비속어로 감지된 부분:"
+                            + fword(msg))
         if not isinstance(message.channel, discord.DMChannel):
             await message.delete()
         return
 
-    if "사랑" in message.content or "좋" in message.content:
-        if "고양" in message.content:
+    if "사랑" in msg or "좋" in msg:
+        if "고양" in msg:
             await message.add_reaction('❤️')
 
-    if message.author.name == "_cheese_07" and "//" in message.content and "http" not in message.content:
-        keyword = message.content.split("//")[:-1]
-        response = message.content.split("//")[-1]
-        all_ = message.content.split("//")
+    if message.author.name == "_cheese_07" and "//" in msg and "http" not in msg:
+        keyword = msg.split("//")[:-1]
+        response = msg.split("//")[-1]
+        all_ = msg.split("//")
         kss = "고양"
         filtered_list = [item for item in all_ if item != "" and item != " "]
         if len(filtered_list) >= 2:
@@ -225,14 +234,14 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
         return
 
-    if "명언" in message.content and "고양" in message.content:
+    if "명언" in msg and "고양" in msg:
         quotes, authors = parse_quotes()
         ind = random.randint(0, len(quotes) - 1)
         await message.reply(embed=discord.Embed(description=quotes[ind]).set_footer(text=authors[ind]))
         return
 
-    if "야구" in message.content and ("게임" in message.content or "숫자" in message.content)\
-            and "고양" in message.content:
+    if "야구" in msg and ("게임" in msg or "숫자" in msg)\
+            and "고양" in msg:
         responding = True
         secret_number = generate_number()
         rep = await message.reply(embed=discord.Embed(description='').add_field(name="야구 게임을 시작합니다", value=''))
@@ -265,7 +274,7 @@ async def on_message(message):
         responding = False
         return
 
-    if "끝말" in message.content and "고양" in message.content:
+    if "끝말" in msg and "고양" in msg:
         responding = True
         playing = True
         global history
@@ -425,7 +434,7 @@ async def on_message(message):
                 if len(keyword) >= j and response:
                     bo = False
                     for i in range(0, len(keyword)):
-                        if not keyword[i] in message.content:
+                        if not keyword[i] in msg:
                             bo = True
                             break
                     if not bo:
@@ -438,7 +447,7 @@ async def on_message(message):
             except ValueError:
                 pass
 
-    if "고양" in message.content:
+    if "고양" in msg:
         fail_response = [
             "잘 알아듣지 못했어요:(",
             "부르셨나요? 무슨 말인지 모르겠어요ㅠㅠ",
