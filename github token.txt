@@ -11,7 +11,8 @@ git push -f https://github.com/cheesedongjin/DiscordBotCD.git
 pull:
 cd DiscordBotCD
 git init
-git stash && git pull origin master && git stash pop
+git stash
+git pull -f https://github.com/cheesedongjin/DiscordBotCD.git
 
 run:
 tmux
