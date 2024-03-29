@@ -177,12 +177,13 @@ async def on_message(message):
     msg = message.content
     mentioned_roles = [role for role in message.role_mentions if role in message.guild.get_member(bot.user.id).roles]
 
-    if message.reference and message.reference.resolved.author.bot:
-        msg += "고양아"
-    elif bot.user.mentioned_in(message) or mentioned_roles:
-        msg += "고양아"
-    elif isinstance(message.channel, discord.DMChannel):
-        msg += "고양아"
+    if "//" not in msg:
+        if message.reference and message.reference.resolved.author.bot:
+            msg += "고양아"
+        elif bot.user.mentioned_in(message) or mentioned_roles:
+            msg += "고양아"
+        elif isinstance(message.channel, discord.DMChannel):
+            msg += "고양아"
 
     if message.author == bot.user or "고양시" in msg or responding:
         return
