@@ -12,7 +12,6 @@ pull:
 cd DiscordBotCD
 git init
 git stash && git pull origin master && git stash pop
-git pull https://github.com/cheesedongjin/DiscordBotCD.git
 
 run:
 tmux
