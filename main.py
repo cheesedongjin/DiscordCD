@@ -181,6 +181,8 @@ async def on_message(message):
         msg += "고양아"
     elif bot.user.mentioned_in(message) or mentioned_roles:
         msg += "고양아"
+    elif isinstance(message.channel, discord.DMChannel):
+        msg += "고양아"
 
     if message.author == bot.user or "고양시" in msg or responding:
         return
