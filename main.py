@@ -55,7 +55,7 @@ def validate_input(guess):
 
 
 # 봇의 설정
-token = 'MTE4OTAyNzMzNjYwODI4NDcxMg.G9r1Qa.mnHEXBMQDh0DbLHp9Qgo9rj2I9IxE7KlYnwia4'
+token = 'token here'
 prefix = ''
 
 # 봇 객체 생성
